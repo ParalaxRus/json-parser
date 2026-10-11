@@ -1,0 +1,10 @@
+{
+    "explorer.confirmDragAndDrop": false,
+     "[cpp]": {
+        "editor.inlineSuggest.enabled": false,
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.formatOnSave": true
+    },
+    "editor.inlineSuggest.edits.allowCodeShifting": "never",
+     "C_Cpp.clang_format_style": "file"
+}
