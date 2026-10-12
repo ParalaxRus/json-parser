@@ -53,28 +53,49 @@ std::string getNumberOrKeyword(std::istream& input) {
   return value;
 }
 
+JsonValue parseNumber(const std::string& v) {
+  // Number
+  try {
+    const bool isFloatingPoint = (v.find_first_of(".eE") != std::string::npos);
+    if (isFloatingPoint) {
+      const double value = std::stod(v);
+      return JsonValue(value);
+    } else {
+      const int value = std::stoi(v);
+      return JsonValue(value);
+    }
+  } catch (const std::exception& exc) {
+    throw std::runtime_error(std::format("invalid json, error: {}"),
+                             exc.what());
+  }
+}
+
 }  // namespace
 
 JsonValue JsonParser::parse(std::istream& input) const {
-  skip(input);
-
-  JsonValue value;
-
-  if (input.peek() == '{') {
-    value = parseObject(input);
-  } else if (input.peek() == '[') {
-    value = parseArray(input);
-  } else if (input.peek() == '"') {
-    value = parseString(input);
-  } else {
-    value = parseValue(input);
+  Tokenizer tokenizer(input);
+  const auto token = tokenizer.next();
+  switch (token.type) {
+    case TokenType::LBrace:
+      return parseObject(tokenizer);
+    case TokenType::LBracket:
+      return parseArray(tokenizer);
+    case TokenType::String:
+      return JsonValue(*token.value);
+    case TokenType::Number:
+      return parseNumber(*token.value);
+    case TokenType::False:
+      return JsonValue(false);
+    case TokenType::True:
+      return JsonValue(true);
+    case TokenType::Null:
+      return JsonValue();
+    default:
+      // skip
   }
-  swallowComma(input);
-
-  return value;
 }
 
-JsonValue JsonParser::parseObject(std::istream& input) const {
+JsonValue JsonParser::parseObject(Tokenizer& tokenizer) const {
   input.get();
 
   JsonValue::Object object;
@@ -101,75 +122,26 @@ JsonValue JsonParser::parseObject(std::istream& input) const {
   return JsonValue(object);
 }
 
-JsonValue JsonParser::parseArray(std::istream& input) const {
-  input.get();
-
+JsonValue JsonParser::parseArray(Tokenizer& tokenizer) const {
   JsonValue::Array array;
 
-  while (input && input.peek() != ']') {
-    const auto next = parse(input);
+  while (true) {
+    const auto token = tokenizer.next();
+    if (token.type == TokenType::LBracket) {
+      break;
+    }
+    if (token.type == TokenType::End) {
+      throw std::runtime_error("invalid json");
+    }
+    if (token.type == TokenType::Comma) {
+      continue;
+    }
+
+    const auto next = parse(tokenizer);
     array.push_back(next);
   }
 
-  ensure_get(input, {']'});
-
   return JsonValue(array);
-}
-
-JsonValue JsonParser::parseString(std::istream& input) const {
-  input.get();
-  std::string value;
-
-  while (input && input.peek() != '"') {
-    value += input.get();
-  }
-
-  ensure_get(input, {'"'});
-
-  return JsonValue(value);
-}
-
-JsonValue JsonParser::parseValue(std::istream& input) const {
-  skip(input);
-
-  const auto raw = getNumberOrKeyword(input);
-
-  // Number
-  try {
-    const bool isFloatingPoint =
-        (raw.find_first_of(".eE") != std::string::npos);
-    if (isFloatingPoint) {
-      const double value = std::stod(raw);
-      return JsonValue(value);
-    } else {
-      const int value = std::stoi(raw);
-      return JsonValue(value);
-    }
-  } catch (...) {
-  }
-
-  // Bool
-  if (raw == std::string("true")) {
-    return JsonValue(true);
-  }
-  if (raw == std::string("false")) {
-    return JsonValue(false);
-  }
-
-  // Null
-  if (raw == std::string("null")) {
-    return JsonValue();
-  }
-
-  throw std::runtime_error(std::format("value {} is not supported", raw));
-}
-
-std::string JsonParser::parseKey(std::istream& input) const {
-  const auto value = parseString(input);
-  if (!value.isString()) {
-    throw std::runtime_error("key is not a string");
-  }
-  return value.get<std::string>();
 }
 
 }  // namespace jsonparser

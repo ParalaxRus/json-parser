@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(jsonparser
     src/main.cpp
     src/parser.cpp
+    src/tokenizer.cpp
     src/value.cpp
 )
 

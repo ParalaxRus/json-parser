@@ -1,2 +1,2 @@
 # JsonParserGo
-Json parser example in go lang
+Yet another json parser in go lang
