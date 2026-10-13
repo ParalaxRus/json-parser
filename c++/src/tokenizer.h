@@ -33,9 +33,10 @@ class Tokenizer {
  public:
   explicit Tokenizer(std::istream& reader);
   Token next();
+  TokenType peekType();
 
  private:
-  std::istream _reader;
+  std::istream& _reader;
 };
 
 }  // namespace jsonparser

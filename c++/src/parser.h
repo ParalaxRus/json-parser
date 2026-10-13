@@ -1,6 +1,7 @@
 #pragma once
 
 #include <istream>
+#include <optional>
 
 #include "tokenizer.h"
 #include "value.h"
@@ -12,7 +13,7 @@ class JsonParser {
   JsonValue parse(std::istream& input) const;
 
  private:
-  JsonValue parse(Tokenizer& tokenizer) const;
+  std::optional<JsonValue> parse(Tokenizer& tokenizer) const;
   JsonValue parseObject(Tokenizer& tokenizer) const;
   JsonValue parseArray(Tokenizer& tokenizer) const;
   JsonValue parseString(Tokenizer& tokenizer) const;

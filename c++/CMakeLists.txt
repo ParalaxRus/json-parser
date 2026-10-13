@@ -30,6 +30,7 @@ add_executable(parser_tests
     tests/parser_test.cpp
 
     src/parser.cpp
+    src/tokenizer.cpp
     src/value.cpp
 )
 

@@ -11,10 +11,12 @@ std::string readString(std::istream& reader) {
   while (reader && reader.peek() != '"') {
     v += reader.get();
   }
+  reader.get();
   return v;
 }
 
 void readLiteral(std::istream& reader, const std::string& expected) {
+  reader.unget();
   for (auto c : expected) {
     if (!reader || std::tolower(reader.get()) != c) {
       throw std::runtime_error("invalid json");
@@ -23,15 +25,17 @@ void readLiteral(std::istream& reader, const std::string& expected) {
 }
 
 std::string readNumber(std::istream& reader) {
-  if (reader.peek() != '-' && std::isdigit(reader.peek())) {
+  reader.unget();
+  if (reader.peek() != '-' && !std::isdigit(reader.peek())) {
     throw std::runtime_error("invalid json");
   }
 
   std::string v;
+  v += reader.get();
   while (reader && !std::isspace(reader.peek()) && reader.peek() != ',' &&
          reader.peek() != ']' && reader.peek() != '}') {
     const char c = reader.get();
-    if (!std::isdigit(c) || c != '.') {
+    if (!std::isdigit(c) && c != '.') {
       throw std::runtime_error("invalid json");
     }
     v += c;
@@ -45,12 +49,57 @@ std::string readNumber(std::istream& reader) {
 Tokenizer::Tokenizer(std::istream& reader) : _reader(reader) {
 }
 
-Token Tokenizer::next() {
-  char c;
+TokenType Tokenizer::peekType() {
+  if (!_reader) {
+    return TokenType::End;
+  }
 
   _reader >> std::ws;
 
-  if (_reader) {
+  if (!_reader) {
+    return TokenType::End;
+  }
+
+  const char c = std::tolower(_reader.peek());
+
+  switch (c) {
+    case '{':
+      return TokenType::LBrace;
+    case '}':
+      return TokenType::RBrace;
+    case '[':
+      return TokenType::LBracket;
+    case ']':
+      return TokenType::RBracket;
+    case ':':
+      return TokenType::Colon;
+    case ',':
+      return TokenType::Comma;
+    case '"': {
+      return TokenType::String;
+    }
+    case 't':
+      return TokenType::True;
+    case 'f':
+      return TokenType::False;
+    case 'n':
+      return TokenType::Null;
+    default: {
+      return TokenType::Number;
+    }
+  }
+
+  throw std::runtime_error("should not happen");
+}
+
+Token Tokenizer::next() {
+  if (!_reader) {
+    return Token(TokenType::End);
+  }
+
+  _reader >> std::ws;
+
+  if (!_reader) {
     return Token(TokenType::End);
   }
 
@@ -69,22 +118,26 @@ Token Tokenizer::next() {
       return Token(TokenType::Colon);
     case ',':
       return Token(TokenType::Comma);
-    case '"':
-      const auto v = readString(_reader);
-      return Token(TokenType::String, v);
+    case '"': {
+      const auto str = readString(_reader);
+      return Token(TokenType::String, str);
+    }
     case 't':
       readLiteral(_reader, "true");
       return Token(TokenType::True);
     case 'f':
       readLiteral(_reader, "false");
-      return Token(TokenType::True);
+      return Token(TokenType::False);
     case 'n':
       readLiteral(_reader, "null");
       return Token(TokenType::Null);
-    default:
-      const auto v = readNumber(_reader);
-      return Token(TokenType::Number, v);
+    default: {
+      const auto num = readNumber(_reader);
+      return Token(TokenType::Number, num);
+    }
   }
+
+  throw std::runtime_error("should not happen");
 }
 
 }  // namespace jsonparser
