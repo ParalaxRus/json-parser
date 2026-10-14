@@ -41,8 +41,15 @@ JsonValue JsonParser::parse(std::istream& input) const {
   return *value;
 }
 
-std::optional<JsonValue> JsonParser::parse(Tokenizer& tokenizer) const {
-  const auto token = tokenizer.next();
+std::optional<JsonValue> JsonParser::parse(Tokenizer& tokenizer,
+                                           bool advance) const {
+  if (advance) {
+    if (!tokenizer.next()) {
+      return {};
+    }
+  }
+
+  const auto token = tokenizer.get();
   switch (token.type) {
     case TokenType::LBrace:
       return parseObject(tokenizer);
@@ -59,35 +66,35 @@ std::optional<JsonValue> JsonParser::parse(Tokenizer& tokenizer) const {
     case TokenType::Null:
       return JsonValue();
     default:
-      return std::nullopt;
+      return {};
   }
 }
 
 JsonValue JsonParser::parseObject(Tokenizer& tokenizer) const {
   JsonValue::Object object;
 
-  while (true) {
-    const auto key = tokenizer.next();
-    if (key.type == TokenType::RBrace) {
-      break;
-    }
-    if (key.type == TokenType::Comma) {
+  while (tokenizer.next() && (tokenizer.get().type != TokenType::RBrace)) {
+    const auto token = tokenizer.get();
+    if (token.type == TokenType::Comma) {
       continue;
     }
-    if (key.type != TokenType::String) {
+    if (token.type != TokenType::String) {
       throw std::runtime_error("invalid json");
     }
-    if (object.count(*key.value) > 0) {
-      throw std::runtime_error(
-          std::format("duplicate key {} found", *key.value));
+    const auto key = *token.value;
+    if (object.count(key) > 0) {
+      throw std::runtime_error(std::format("duplicate key {} found", key));
     }
-    const auto colon = tokenizer.next();
+    if (!tokenizer.next()) {
+      throw std::runtime_error("invalid json");
+    }
+    const auto colon = tokenizer.get();
     if (colon.type != TokenType::Colon) {
       throw std::runtime_error("invalid json");
     }
     const auto value = parse(tokenizer);
     ensureValue(value);
-    object[*key.value] = *value;
+    object[key] = *value;
   }
 
   return JsonValue(object);
@@ -96,20 +103,12 @@ JsonValue JsonParser::parseObject(Tokenizer& tokenizer) const {
 JsonValue JsonParser::parseArray(Tokenizer& tokenizer) const {
   JsonValue::Array array;
 
-  while (true) {
-    const auto tokenType = tokenizer.peekType();
-    if (tokenType == TokenType::End) {
-      throw std::runtime_error("invalid json");
-    }
-    if (tokenType == TokenType::Comma) {
-      tokenizer.next();
+  while (tokenizer.next() && (tokenizer.get().type != TokenType::RBracket)) {
+    const auto token = tokenizer.get();
+    if (token.type == TokenType::Comma) {
       continue;
     }
-    if (tokenType == TokenType::RBracket) {
-      tokenizer.next();
-      break;
-    }
-    const auto value = parse(tokenizer);
+    const auto value = parse(tokenizer, false);
     ensureValue(value);
     array.push_back(*value);
   }

@@ -46,98 +46,68 @@ std::string readNumber(std::istream& reader) {
 
 }  // namespace
 
-Tokenizer::Tokenizer(std::istream& reader) : _reader(reader) {
+Tokenizer::Tokenizer(std::istream& reader)
+    : _reader(reader), _token(Token(TokenType::End)) {
 }
 
-TokenType Tokenizer::peekType() {
+bool Tokenizer::next() {
   if (!_reader) {
-    return TokenType::End;
+    _token = Token(TokenType::End);
+    return false;
   }
 
   _reader >> std::ws;
 
   if (!_reader) {
-    return TokenType::End;
-  }
-
-  const char c = std::tolower(_reader.peek());
-
-  switch (c) {
-    case '{':
-      return TokenType::LBrace;
-    case '}':
-      return TokenType::RBrace;
-    case '[':
-      return TokenType::LBracket;
-    case ']':
-      return TokenType::RBracket;
-    case ':':
-      return TokenType::Colon;
-    case ',':
-      return TokenType::Comma;
-    case '"': {
-      return TokenType::String;
-    }
-    case 't':
-      return TokenType::True;
-    case 'f':
-      return TokenType::False;
-    case 'n':
-      return TokenType::Null;
-    default: {
-      return TokenType::Number;
-    }
-  }
-
-  throw std::runtime_error("should not happen");
-}
-
-Token Tokenizer::next() {
-  if (!_reader) {
-    return Token(TokenType::End);
-  }
-
-  _reader >> std::ws;
-
-  if (!_reader) {
-    return Token(TokenType::End);
+    _token = Token(TokenType::End);
+    return false;
   }
 
   const char c = std::tolower(_reader.get());
 
   switch (c) {
     case '{':
-      return Token(TokenType::LBrace);
+      _token = Token(TokenType::LBrace);
+      break;
     case '}':
-      return Token(TokenType::RBrace);
+      _token = Token(TokenType::RBrace);
+      break;
     case '[':
-      return Token(TokenType::LBracket);
+      _token = Token(TokenType::LBracket);
+      break;
     case ']':
-      return Token(TokenType::RBracket);
+      _token = Token(TokenType::RBracket);
+      break;
     case ':':
-      return Token(TokenType::Colon);
+      _token = Token(TokenType::Colon);
+      break;
     case ',':
-      return Token(TokenType::Comma);
+      _token = Token(TokenType::Comma);
+      break;
     case '"': {
       const auto str = readString(_reader);
-      return Token(TokenType::String, str);
+      _token = Token(TokenType::String, str);
+      break;
     }
     case 't':
       readLiteral(_reader, "true");
-      return Token(TokenType::True);
+      _token = Token(TokenType::True);
+      break;
     case 'f':
       readLiteral(_reader, "false");
-      return Token(TokenType::False);
+      _token = Token(TokenType::False);
+      break;
     case 'n':
       readLiteral(_reader, "null");
-      return Token(TokenType::Null);
+      _token = Token(TokenType::Null);
+      break;
     default: {
       const auto num = readNumber(_reader);
-      return Token(TokenType::Number, num);
+      _token = Token(TokenType::Number, num);
     }
   }
 
-  throw std::runtime_error("should not happen");
+  return true;
 }
 
 }  // namespace jsonparser

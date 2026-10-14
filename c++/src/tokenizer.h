@@ -32,11 +32,17 @@ struct Token {
 class Tokenizer {
  public:
   explicit Tokenizer(std::istream& reader);
-  Token next();
-  TokenType peekType();
+  bool next();
+  Token& get() {
+    return _token;
+  }
+  const Token& get() const {
+    return _token;
+  }
 
  private:
   std::istream& _reader;
+  Token _token;
 };
 
 }  // namespace jsonparser

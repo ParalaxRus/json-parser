@@ -13,7 +13,8 @@ class JsonParser {
   JsonValue parse(std::istream& input) const;
 
  private:
-  std::optional<JsonValue> parse(Tokenizer& tokenizer) const;
+  std::optional<JsonValue> parse(Tokenizer& tokenizer,
+                                 bool advance = true) const;
   JsonValue parseObject(Tokenizer& tokenizer) const;
   JsonValue parseArray(Tokenizer& tokenizer) const;
   JsonValue parseString(Tokenizer& tokenizer) const;
